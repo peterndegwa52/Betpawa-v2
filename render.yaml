@@ -2,10 +2,10 @@ services:
   - type: web
     name: virtual-futbal
     runtime: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
     startCommand: gunicorn app:app --worker-class gthread --workers 2 --threads 4 --timeout 120
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
       - key: SECRET_KEY
         generateValue: true
