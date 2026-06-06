@@ -1,21 +1,37 @@
 """
 Match Engine – Real 90-minute matches with PostgreSQL
 """
-import random, threading, time, json, os, psycopg2
-from psycopg2.extras import RealDictCursor
+import random, threading, time, json, os
+import psycopg
+from psycopg.rows import dict_row
 from datetime import datetime, timedelta
 from contextlib import contextmanager
 
-# Database connection helper
-def get_db_conn():
-    database_url = os.environ.get('DATABASE_URL')
-    if database_url and database_url.startswith('postgres://'):
-        database_url = database_url.replace('postgres://', 'postgresql://', 1)
-    return psycopg2.connect(database_url, cursor_factory=RealDictCursor)
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
 @contextmanager
 def get_cursor():
-    conn = get_db_conn()
+    """Get database cursor with automatic commit/rollback"""
+    if not DATABASE_URL:
+        raise Exception("DATABASE_URL environment variable not set")
+    
+    db_url = DATABASE_URL
+    if db_url.startswith('postgres://'):
+        db_url = db_url.replace('postgres://', 'postgresql://', 1)
+    
+    conn = psycopg.connect(db_url, row_factory=dict_row)
+    try:
+        yield conn.cursor()
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+# Rest of your match_engine.py code remains the SAME
+# Just replace all `with get_cursor() as cur:` with the above
+# And keep all your existing logic
     try:
         yield conn.cursor()
         conn.commit()
